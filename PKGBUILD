@@ -1,4 +1,4 @@
-# Maintainer: Your Name <your.email@example.com>
+# Maintainer: alfaonyt
 
 pkgname=libfprint
 pkgver=1.94.4+tod1
