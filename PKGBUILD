@@ -1,32 +1,36 @@
 # Maintainer: Your Name <your.email@example.com>
 
-pkgname=focaltech-fingerprint-lts
-pkgver=1.0
+pkgname=libfprint
+pkgver=1.94.4+tod1
 pkgrel=1
-pkgdesc="Focaltech fingerprint SPI driver and custom libfprint for linux-lts kernel"
+pkgdesc="Custom libfprint library supporting Focaltech fingerprint SPI driver"
 arch=('x86_64')
 url="https://github.com/ftfpteams/ubuntu_spi"
-license=('GPL' 'LGPL')
-depends=('linux-lts')
-makedepends=('linux-lts-headers')
-conflicts=('libfprint')
-provides=('libfprint' 'focaltech-fingerprint-lts')
+license=('LGPL')
+depends=()
+conflicts=('libfprint') # Conflict with existing libfprint package
+provides=('libfprint=1.94.4' 'libfprint-2.so=2-64')
 source=(
   "https://raw.githubusercontent.com/ftfpteams/ubuntu_spi/main/focal_spi.c"
   "Makefile"
   "libfprint.deb::https://github.com/ftfpteams/ubuntu_spi/raw/main/libfprint-2-2_1.94.4+tod1-0ubuntu1~22.04.2_spi_amd64_20240620.deb"
+  "fprintd.service"  # Add your custom fprintd.service here
 )
-md5sums=('SKIP' 'SKIP' 'SKIP')
+md5sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
 
 prepare() {
   cd "$srcdir"
 
-  # Extract libfprint files from the deb package
-  bsdtar -xf libfprint.deb
-  bsdtar -xf data.tar.xz
+  # Extract the libfprint deb package directly
+  ar x libfprint.deb
 
-  # Modify the focal_spi.c if necessary (uncomment if needed)
-  # sed -i 's/spi->mode = SPI_MODE_0;/spi->mode = SPI_MODE_0|SPI_CS_HIGH;/' focal_spi.c
+  # Extract the files from the .zst archives
+  if [ -f "data.tar.zst" ]; then
+    bsdtar -xf data.tar.zst
+  else
+    echo "Error: Could not find data.tar.zst in the deb package."
+    return 1
+  fi
 }
 
 build() {
@@ -44,8 +48,8 @@ package() {
   install -D -m644 focal_spi.ko "${pkgdir}/usr/lib/modules/$(uname -r)/kernel/drivers/input/touchscreen/focal_spi.ko"
 
   # Install the custom libfprint library
-  install -Dm755 "./usr/lib/x86_64-linux-gnu/libfprint.so.2.0.0" "${pkgdir}/usr/lib/libfprint.so.2.0.0"
-  ln -sf libfprint.so.2.0.0 "${pkgdir}/usr/lib/libfprint.so.2"
+  install -Dm755 "./usr/lib/x86_64-linux-gnu/libfprint-2.so.2.0.0" "${pkgdir}/usr/lib/libfprint-2.so.2.0.0"
+  ln -sf libfprint-2.so.2.0.0 "${pkgdir}/usr/lib/libfprint-2.so.2"
 
   # Install udev rules if any
   if [ -d "./lib/udev/rules.d" ]; then
@@ -53,22 +57,27 @@ package() {
     cp -a "./lib/udev/rules.d/." "${pkgdir}/usr/lib/udev/rules.d/"
   fi
 
-  # Clean up extracted files
-  rm -rf usr lib etc
+  # Install the custom fprintd.service
+  install -Dm644 "$srcdir/fprintd.service" "${pkgdir}/usr/lib/systemd/system/fprintd.service"
 }
 
 post_install() {
-  depmod -a "$(uname -r)"
+  # Unregister fprintd.service from the fprintd package
+  sudo pacman -Qql fprintd | grep 'fprintd.service' && sudo pacman -Rdd fprintd
 
-  # Ensure the module loads on boot
-  echo "focal_spi" | sudo tee /etc/modules-load.d/focal_spi.conf >/dev/null
+  # Reload systemd and enable the new fprintd.service
+  sudo systemctl daemon-reload
+  sudo systemctl enable fprintd.service
+
+  # Add libfprint and fprintd to IgnorePkg
+  sudo bash -c 'grep -qxF "IgnorePkg = libfprint fprintd" /etc/pacman.conf || echo "IgnorePkg = libfprint fprintd" >> /etc/pacman.conf'
 }
 
 post_upgrade() {
-  depmod -a "$(uname -r)"
-}
+  # Ensure fprintd.service remains unregistered from fprintd package
+  sudo systemctl daemon-reload
+  sudo systemctl enable fprintd.service
 
-post_remove() {
-  depmod -a "$(uname -r)"
-  sudo rm -f /etc/modules-load.d/focal_spi.conf
+  # Ensure packages are ignored after upgrades
+  sudo bash -c 'grep -qxF "IgnorePkg = libfprint fprintd" /etc/pacman.conf || echo "IgnorePkg = libfprint fprintd" >> /etc/pacman.conf'
 }
