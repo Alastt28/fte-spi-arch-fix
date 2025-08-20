@@ -37,8 +37,7 @@ build() {
   cd "$srcdir"
 
   # Build the kernel module
-  KERNELDIR="/usr/lib/modules/$(uname -r)/build"
-  make KERNELDIR=$KERNELDIR
+  make KERNELDIR="/usr/lib/modules/$(uname -r)/build"
 }
 
 package() {
