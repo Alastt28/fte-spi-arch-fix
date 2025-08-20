@@ -11,7 +11,7 @@ depends=()
 conflicts=('libfprint') # Conflict with existing libfprint package
 provides=('libfprint=1.94.4' 'libfprint-2.so=2-64')
 source=(
-  "https://raw.githubusercontent.com/ftfpteams/ubuntu_spi/main/focal_spi.c"
+  "https://raw.githubusercontent.com/Alastt28/fte-spi-arch-fix/refs/heads/main/focal_spi.c"
   "Makefile"
   "libfprint.deb::https://github.com/ftfpteams/ubuntu_spi/raw/main/libfprint-2-2_1.94.4+tod1-0ubuntu1~22.04.2_spi_amd64_20240620.deb"
   "fprintd.service"  # Add your custom fprintd.service here
