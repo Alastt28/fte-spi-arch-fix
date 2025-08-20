@@ -4,8 +4,8 @@ Simply install dependencies, clone the repo and build:
 
 ```bash
 sudo pacman -S git base-devel
-git clone https://github.com/alfaonyt/fte-spi-arch.git
-cd fte-spi-arch
+git clone https://github.com/Alastt28/fte-spi-arch-fix.git
+cd fte-spi-arch-fix
 makepkg -si
 ```
 
